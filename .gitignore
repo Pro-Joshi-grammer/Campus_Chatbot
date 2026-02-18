@@ -1,0 +1,5 @@
+virenv/
+__pycache__/
+chroma_db/
+data/
+.env

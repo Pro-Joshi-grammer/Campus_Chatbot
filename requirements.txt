@@ -1,0 +1,33 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+python-dotenv==1.0.1
+requests==2.32.3
+beautifulsoup4==4.12.3
+
+# LangChain core set
+langchain==0.3.27
+langchain-core==0.3.79
+langchain-community==0.3.27
+langsmith==0.3.45
+langchain-openai==0.3.35
+
+# Vector store (new package path to avoid deprecation)
+langchain-chroma==0.1.4
+
+# Tokenizer
+tiktoken==0.12.0
+
+# Document parsing
+pymupdf==1.24.10
+
+# Reranker and HF stack
+sentence-transformers==3.0.1
+transformers>=4.41.0
+torch>=2.1.0
+huggingface-hub>=0.23.0
+
+# HuggingFace embeddings integration for LangChain
+langchain-huggingface==0.1.0
+
+# Streamlit UI (client)
+streamlit==1.38.0
