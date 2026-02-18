@@ -1,121 +1,99 @@
 # README.md — Campus RAG Chatbot (FastAPI + Streamlit + Chroma + Reranker + OpenRouter)
 
 A campus chatbot built with a Retrieval-Augmented Generation (RAG) pipeline.  
-It scrapes selected campus web pages + downloads PDFs, indexes them into a local Chroma vector DB, retrieves and reranks relevant chunks, and generates grounded answers using an OpenRouter-hosted LLM.
-
-***
+It scrapes selected campus web pages and downloads PDFs, indexes them into a local Chroma vector database, retrieves and reranks relevant chunks, and generates grounded answers using an OpenRouter-hosted LLM.
 
 ## Features
-- Scrapes **HTML pages** and downloads **same-domain PDFs** into `data/` [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Detects HTML updates using **SHA-1 hash comparison** (updates only changed pages) [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Splits content into chunks and stores embeddings in **Chroma** (`./chroma_db`) [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Query-time retrieval + **cross-encoder reranking** (`BAAI/bge-reranker-base`) [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/475e50ff-cc54-453d-8bf3-8cfd9e31ae72/rag_core.py)
-- FastAPI backend (`/chat`) + Streamlit chat UI [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/244ac1b7-5fa1-43a9-a800-41c95dd633fc/app.py)
-
-***
+- Scrapes HTML pages and downloads same-domain PDFs into a local data folder.
+- Detects HTML updates using SHA-1 hash comparison and updates only changed pages.
+- Chunks content, creates embeddings locally, and persists vectors in Chroma.
+- Query-time retrieval with cross-encoder reranking for better relevance.
+- FastAPI backend endpoint for chat and a Streamlit chat UI.
 
 ## Project Structure
-- `ingest.py` — scrape + parse + chunk + embed + persist to Chroma [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- `rag_core.py` — RAG chain: Chroma retriever + reranker + OpenRouter LLM [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/475e50ff-cc54-453d-8bf3-8cfd9e31ae72/rag_core.py)
-- `main.py` — FastAPI server exposing `/chat` and `/` [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/a2b06faa-a727-47e5-86ca-7d4106a66464/main.py)
-- `app.py` — Streamlit UI client [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/244ac1b7-5fa1-43a9-a800-41c95dd633fc/app.py)
-- `requirements.txt` — dependencies [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/a5ccb29e-8db2-4650-93f9-afd10d575428/requirements.txt)
-
-***
+- ingest.py: Scrape + parse + chunk + embed + store in vector DB
+- rag_core.py: Builds RAG chain (retriever + reranker + LLM)
+- main.py: FastAPI server exposing chat API
+- app.py: Streamlit UI client
+- requirements.txt: Python dependencies
 
 ## Requirements
-- Python 3.10+ recommended (works in Linux/WSL)
-- Internet access (for scraping + OpenRouter LLM + first-time model downloads)
+- Python 3.10 or newer recommended
+- Internet access for scraping and LLM calls
+- Enough disk space for model downloads (first run may download embedding/reranker models)
 
-Install dependencies: [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/a5ccb29e-8db2-4650-93f9-afd10d575428/requirements.txt)
-```bash
-pip install -r requirements.txt
-```
+## Setup
+1) Create and activate a virtual environment (recommended)
+- Linux/WSL
+  - python3 -m venv virenv
+  - source virenv/bin/activate
 
-***
+2) Install dependencies
+- pip install -r requirements.txt
 
-## Configuration (OpenRouter)
-Create a `.env` file in the project root:
+## Configuration
+Create a file named .env in the project root and add:
+- OPENROUTER_API_KEY=your_key_here
 
-```env
-OPENROUTER_API_KEY=your_openrouter_key_here
-```
+Important: If you change the key later, restart the backend server so it reads the updated value.
 
-`rag_core.py` loads `.env` using `load_dotenv()` and reads `OPENROUTER_API_KEY` at runtime. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/475e50ff-cc54-453d-8bf3-8cfd9e31ae72/rag_core.py)
-
-***
-
-## Step 1 — Ingest Data (build/update vector DB)
-Run the ingestion script to scrape pages/PDFs and build `./chroma_db`: [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-
-```bash
-python ingest.py
-```
-
-What it does:
-- Saves HTML snapshots with unique filenames based on domain/path/query (prevents overwrites). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Updates an HTML file only when its hash changes. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Downloads PDFs only if the file does not already exist (PDF hash checking is not implemented). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Parses HTML/PDF, chunks, embeds (MiniLM), and persists to Chroma. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-
-***
-
-## Step 2 — Start Backend (FastAPI)
+## Step 1 — Ingest Data (build/update vector database)
 Run:
+- python ingest.py
 
-```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+What happens:
+- Saves each scraped page as an HTML file using a unique filename derived from domain + path + query string.
+- Updates an existing HTML file only if the content hash changes.
+- Downloads PDFs only if the filename does not already exist locally.
+- Extracts text from HTML and PDFs, splits into chunks, embeds chunks, and persists the vector index in the chroma_db directory.
 
-Endpoints: [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/a2b06faa-a727-47e5-86ca-7d4106a66464/main.py)
-- `GET /` → health/status
-- `POST /chat` → ask a question
+If you want a clean rebuild:
+- Delete the data folder and chroma_db folder, then run python ingest.py again.
+
+## Step 2 — Start the Backend (FastAPI)
+Run:
+- uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+API endpoints:
+- GET / returns a simple status JSON
+- POST /chat accepts JSON like {"text":"your question"} and returns {"answer":"..."}
 
 Quick test:
-```bash
-curl -s http://127.0.0.1:8000/
-curl -s -X POST http://127.0.0.1:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Hello"}'
-```
-The second call returns: `{"answer": "..."}` [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/a2b06faa-a727-47e5-86ca-7d4106a66464/main.py)
+- curl -s http://127.0.0.1:8000/
+- curl -s -X POST http://127.0.0.1:8000/chat -H "Content-Type: application/json" -d '{"text":"Hello"}'
 
-***
+## Step 3 — Start the Frontend (Streamlit)
+In a new terminal (same venv):
+- streamlit run app.py
 
-## Step 3 — Start Frontend (Streamlit)
-In a new terminal:
+In the Streamlit sidebar:
+- Set API base URL to http://127.0.0.1:8000
+- Click Recheck API
+- Ask questions in the chat input
 
-```bash
-streamlit run app.py
-```
+## Common Issues
+1) 401 Unauthorized from the LLM
+- The OpenRouter key is missing or invalid.
+- Confirm .env contains OPENROUTER_API_KEY and restart the backend.
+- You can also export it in the same terminal before running uvicorn:
+  - export OPENROUTER_API_KEY=your_key_here
 
-Then open the URL shown in the terminal (usually `http://localhost:8501`). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/244ac1b7-5fa1-43a9-a800-41c95dd633fc/app.py)
+2) Streamlit says backend is not reachable
+- Confirm the backend is running and GET / returns status JSON.
+- Ensure API base URL is only the base (http://127.0.0.1:8000) and not a longer path.
+- If running in WSL, keep both backend and frontend in the same environment and bind backend to 0.0.0.0 as shown above.
 
-In the sidebar:
-- Set **API base URL** to `http://127.0.0.1:8000` (base only, no `/chat`). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/244ac1b7-5fa1-43a9-a800-41c95dd633fc/app.py)
-- Click **Recheck API**. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/244ac1b7-5fa1-43a9-a800-41c95dd633fc/app.py)
+3) Model downloads on first run
+- Embedding and reranker models may download the first time and then be cached.
+- Wait for downloads to complete and retry.
 
-***
-
-## Common Issues & Fixes
-
-### 1) 401 from OpenRouter
-If `/chat` returns 401, your OpenRouter key is missing/invalid.
-- Ensure `.env` exists and contains `OPENROUTER_API_KEY=...`
-- Restart uvicorn after changing `.env` (env changes require restart). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/475e50ff-cc54-453d-8bf3-8cfd9e31ae72/rag_core.py)
-
-### 2) “Backend API not reachable” in Streamlit
-- Verify `GET http://127.0.0.1:8000/` returns status JSON. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/a2b06faa-a727-47e5-86ca-7d4106a66464/main.py)
-- Ensure Streamlit sidebar URL is exactly `http://127.0.0.1:8000` (no markdown brackets, no `/chat`). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/244ac1b7-5fa1-43a9-a800-41c95dd633fc/app.py)
-
-### 3) First run downloads models
-- Embedding and reranker models may download on first run (cached afterward). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/475e50ff-cc54-453d-8bf3-8cfd9e31ae72/rag_core.py)
-
-***
+4) The chatbot answers “I don’t know”
+- This is expected when the retrieved context does not contain the answer.
+- Try asking a more specific question or re-run ingestion to ensure the latest pages are indexed.
+- You can also tune retrieval parameters in rag_core.py (top-k and top_n).
 
 ## Notes
-- HTML change detection is implemented via SHA-1 hash comparison of old vs new page content. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- PDFs are currently skipped if the filename already exists; PDF content updates with same name are not detected. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/f729d627-6b84-4756-9502-6b0900924074/ingest.py)
-- Retrieval defaults: top-k=20 and reranker top_n=5 (tunable in `rag_core.py`). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/7139889/475e50ff-cc54-453d-8bf3-8cfd9e31ae72/rag_core.py)
+- HTML update detection is implemented via hashing old vs new HTML content.
+- PDF update detection is not implemented; PDFs are skipped if a file with the same name already exists.
+- The embedding model is all-MiniLM-L6-v2 and reranker is bge-reranker-base by default.
 
-***
