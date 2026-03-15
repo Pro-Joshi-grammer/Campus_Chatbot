@@ -1,4 +1,4 @@
-# README.md — Campus RAG Chatbot (FastAPI + Streamlit + Chroma + Reranker + OpenRouter)
+# Campus RAG Chatbot (FastAPI + Streamlit + Chroma + Reranker + OpenRouter)
 
 A campus chatbot built with a Retrieval-Augmented Generation (RAG) pipeline.  
 It scrapes selected campus web pages and downloads PDFs, indexes them into a local Chroma vector database, retrieves and reranks relevant chunks, and generates grounded answers using an OpenRouter-hosted LLM.
